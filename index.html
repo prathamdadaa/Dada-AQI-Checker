@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dada AQI Checker – Live Air Quality</title>
+  <meta name="description" content="Check live air quality (AQI), pollutants and weather for any city. Built by Pratham Dada." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌤️</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] } } } };
+  </script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="font-sans text-white antialiased min-h-screen">
+  <!-- Atmospheric backdrop; class is swapped by script.js -->
+  <div id="bg" class="bg-poor" aria-hidden="true"></div>
+
+  <div class="relative mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-10">
+
+    <!-- Header -->
+    <header class="flex items-center justify-between gap-4 mb-6">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Dada AQI Checker</h1>
+        <p class="text-sm text-white/80">Live air quality &amp; weather for any city</p>
+      </div>
+      <button id="themeBtn" type="button" class="glass rounded-full w-11 h-11 grid place-items-center text-lg focus-ring" aria-label="Toggle dark glass theme" title="Toggle theme">🌓</button>
+    </header>
+
+    <!-- Search -->
+    <form id="searchForm" class="glass rounded-2xl p-2 flex flex-col sm:flex-row gap-2" role="search">
+      <label for="cityInput" class="sr-only">City name</label>
+      <div class="flex-1 flex items-center gap-3 px-3">
+        <svg class="w-5 h-5 shrink-0 opacity-80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="cityInput" type="text" value="Dhanbad, Jharkhand" placeholder="Search a city, e.g. Mumbai or Delhi"
+               class="w-full bg-transparent py-3 outline-none placeholder-white/60 text-base" autocomplete="off" />
+      </div>
+      <div class="flex gap-2">
+        <button type="submit" class="btn flex-1 sm:flex-none">Check air</button>
+        <button type="button" id="locateBtn" class="btn btn-ghost flex-1 sm:flex-none">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
+          Locate me
+        </button>
+      </div>
+    </form>
+
+    <!-- Error / info banner -->
+    <div id="banner" class="hidden glass rounded-xl mt-4 px-4 py-3 text-sm" role="alert"></div>
+
+    <main id="app" class="loading mt-6 grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+      <!-- AQI card -->
+      <section class="glass rounded-3xl p-6 sm:p-8 lg:col-span-7" aria-labelledby="aqiTitle">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <h2 id="aqiTitle" class="text-lg font-semibold truncate"><span class="val" id="place">Dhanbad, Jharkhand</span></h2>
+            <p class="text-sm text-white/75"><span class="val" id="updated">Updated just now</span></p>
+          </div>
+          <span id="statusPill" class="val rounded-full bg-white/20 border border-white/30 px-4 py-1.5 text-sm font-semibold whitespace-nowrap">Poor</span>
+        </div>
+
+        <div class="mt-6 flex items-end gap-4">
+          <div id="aqiNumber" class="val text-8xl sm:text-9xl font-extrabold leading-none tracking-tighter">136</div>
+          <div class="pb-3">
+            <div class="text-sm text-white/80">US AQI</div>
+            <div id="mainPollutant" class="val text-sm text-white/80">Main: PM2.5</div>
+          </div>
+        </div>
+
+        <!-- Scale -->
+        <div class="mt-8">
+          <div class="relative pt-5">
+            <div id="marker" class="absolute top-0 -translate-x-1/2 transition-all duration-700 ease-out" style="left:0%">
+              <div class="w-0 h-0 mx-auto border-x-[7px] border-x-transparent border-t-[9px] border-t-white drop-shadow"></div>
+            </div>
+            <div class="scale-bar" role="img" aria-label="AQI scale from Good to Hazardous">
+              <span style="background:#22c55e"></span><span style="background:#eab308"></span><span style="background:#f97316"></span>
+              <span style="background:#ef4444"></span><span style="background:#a855f7"></span><span style="background:#9f1239"></span>
+            </div>
+          </div>
+          <div class="mt-2 grid grid-cols-6 text-[10px] sm:text-xs text-white/80 text-center">
+            <span>Good</span><span>Moderate</span><span>Poor</span><span>Unhealthy</span><span>Severe</span><span>Hazardous</span>
+          </div>
+        </div>
+
+        <p id="advice" class="val mt-6 text-sm sm:text-base text-white/90 leading-relaxed max-w-prose">Sensitive groups should limit prolonged outdoor exertion.</p>
+      </section>
+
+      <!-- Illustration -->
+      <section class="glass rounded-3xl p-3 lg:col-span-5 overflow-hidden min-h-[260px]" aria-label="Air quality illustration">
+        <div id="illustration" class="w-full h-full rounded-2xl overflow-hidden"></div>
+      </section>
+
+      <!-- Pollutants -->
+      <section class="glass rounded-3xl p-6 lg:col-span-7" aria-labelledby="polTitle">
+        <h2 id="polTitle" class="text-lg font-semibold mb-4">Pollutant breakdown</h2>
+        <div id="pollutants" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+      </section>
+
+      <!-- Weather -->
+      <section class="glass rounded-3xl p-6 lg:col-span-5" aria-labelledby="wxTitle">
+        <h2 id="wxTitle" class="text-lg font-semibold mb-4">Weather now</h2>
+        <div class="flex items-center gap-4">
+          <div id="wxIcon" class="val text-6xl leading-none">☀️</div>
+          <div>
+            <div class="text-5xl font-bold tracking-tight"><span class="val" id="temp">32°C</span></div>
+            <div class="text-white/80"><span class="val" id="cond">Sunny</span></div>
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-3 mt-6 text-center">
+          <div class="tile"><div class="tile-label">Humidity</div><div class="tile-value val" id="humidity">45%</div></div>
+          <div class="tile"><div class="tile-label">Wind</div><div class="tile-value val" id="wind">10 km/h</div></div>
+          <div class="tile"><div class="tile-label">UV index</div><div class="tile-value val" id="uv">6</div><div class="text-[11px] text-white/75 val" id="uvLabel">High</div></div>
+        </div>
+        <p class="text-xs text-white/75 mt-4">Feels like <span class="val" id="feels">34°C</span></p>
+      </section>
+    </main>
+
+    <footer class="mt-10 text-center text-sm text-white/80 space-y-1">
+      <p>Created by <strong>Pratham Dada</strong> · First-year BCA student, Indira Gandhi National Open University (IGNOU)</p>
+      <p class="text-xs text-white/60">Data: Open-Meteo Air Quality &amp; Weather APIs. AQI uses the US EPA scale; informational only, not medical advice.</p>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
